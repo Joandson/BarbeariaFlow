@@ -1,24 +1,6 @@
+// src/services/api.ts
+
 const API_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL;
-
-function getApiUrl(): string {
-  if (!API_URL) {
-    throw new Error(
-      "A variável NEXT_PUBLIC_APPS_SCRIPT_URL não está configurada.",
-    );
-  }
-
-  return API_URL;
-}
-
-export async function fetchServicos() {
-  const res = await fetch(`${getApiUrl()}?action=getServicos`);
-
-  if (!res.ok) {
-    throw new Error("Erro ao buscar serviços");
-  }
-
-  return res.json();
-}
 
 export async function criarAgendamento(dados: {
   nome: string;
@@ -27,15 +9,22 @@ export async function criarAgendamento(dados: {
   horario: string;
   servico: string;
 }) {
-  const res = await fetch(getApiUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify(dados),
-  });
+  if (!API_URL) throw new Error("URL da API não configurada");
 
-  if (!res.ok) {
-    throw new Error("Erro ao criar agendamento");
+  try {
+    // Envia como text/plain para contornar restrições de CORS pré-flight do navegador no Apps Script
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify(dados),
+    });
+
+    const resultText = await response.text();
+    return JSON.parse(resultText);
+  } catch (error) {
+    console.error("Erro na requisição para a API:", error);
+    throw error;
   }
-
-  return res.json();
 }
