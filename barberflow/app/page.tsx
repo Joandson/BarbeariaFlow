@@ -1,69 +1,184 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { criarAgendamento } from "@/src/services/api";
+
+type AgendamentoResponse = {
+  sucesso: boolean;
+  mensagem?: string;
+  id?: string | number;
+};
 
 export default function Home() {
+  const [nome, setNome] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [data, setData] = useState("");
+  const [horario, setHorario] = useState("14:00");
+  const [servico, setServico] = useState("Corte + Barba");
+  const [loading, setLoading] = useState(false);
+  const [resultado, setResultado] = useState<AgendamentoResponse | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const res = (await criarAgendamento({
+        nome,
+        whatsapp,
+        data,
+        horario,
+        servico,
+      })) as AgendamentoResponse;
+
+      if (res.sucesso) {
+        setResultado(res);
+      } else {
+        alert(res.mensagem || "Erro ao agendar.");
+      }
+    } catch {
+      alert("Erro ao conectar com o servidor.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function gerarLinkWhats() {
+    if (!resultado?.id) {
+      return "#";
+    }
+
+    const mensagem =
+      `Olá, Caio! Solicitei um agendamento pelo site.\n\n` +
+      `📌 Código: #${resultado.id}\n` +
+      `👤 Cliente: ${nome}\n` +
+      `✂️ Serviço: ${servico}\n` +
+      `📅 Data: ${data}\n` +
+      `⏰ Horário: ${horario}`;
+
+    return `https://wa.me/5571999999999?text=${encodeURIComponent(mensagem)}`;
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
+    <main className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+        <h1 className="text-2xl font-bold text-amber-500 text-center mb-1">
+          Caio Ramos Barbearia
+        </h1>
+        <p className="text-zinc-400 text-center text-sm mb-6">
+          Agende seu horário em poucos segundos
+        </p>
+
+        {resultado ? (
+          <div className="text-center space-y-4 py-4">
+            <div className="w-12 h-12 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+              ✓
+            </div>
+            <h2 className="text-xl font-semibold text-green-400">
+              Pré-Reserva Criada!
+            </h2>
+            <p className="text-zinc-300 text-sm">
+              Para confirmar seu agendamento, envie a mensagem de confirmação no
+              WhatsApp do barbeiro.
+            </p>
             <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              href={gerarLinkWhats()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-xl transition text-center shadow-lg"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              Confirmar no WhatsApp 💬
+            </a>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">
+                Nome Completo
+              </label>
+              <input
+                type="text"
+                required
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Seu nome"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">
+                WhatsApp
+              </label>
+              <input
+                type="tel"
+                required
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="(71) 99999-9999"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">
+                Serviço
+              </label>
+              <select
+                value={servico}
+                onChange={(e) => setServico(e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-500"
+              >
+                <option value="Corte Masculino">Corte Masculino</option>
+                <option value="Barba">Barba</option>
+                <option value="Corte + Barba">Corte + Barba</option>
+                <option value="Coloração">Coloração</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">
+                  Data
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={data}
+                  onChange={(e) => setData(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">
+                  Horário
+                </label>
+                <select
+                  value={horario}
+                  onChange={(e) => setHorario(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-500"
+                >
+                  {["09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00"].map(
+                    (hora) => (
+                      <option key={hora} value={hora}>
+                        {hora}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold py-3 px-4 rounded-xl transition text-center shadow-lg mt-2"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              {loading ? "Reservando..." : "Solicitar Agendamento"}
+            </button>
+          </form>
+        )}
+      </div>
+    </main>
   );
 }
